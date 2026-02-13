@@ -46,11 +46,13 @@ function useStreamClient(session, loadingSession, isHost, isParticipant) {
 
         // 3️⃣ Initialize Stream CHAT
         const apiKey = import.meta.env.VITE_STREAM_API_KEY;
-        if (!apiKey) remember {
-          throw new Error("VITE_STREAM_API_KEY is missing in frontend env");
-        }
 
-        chatClientInstance = StreamChat.getInstance(apiKey);
+if (!apiKey) {
+  throw new Error("VITE_STREAM_API_KEY is missing in frontend env");
+}
+
+chatClientInstance = StreamChat.getInstance(apiKey);
+
 
         await chatClientInstance.connectUser(
           {
