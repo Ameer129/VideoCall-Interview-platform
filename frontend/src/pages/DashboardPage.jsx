@@ -1,7 +1,13 @@
 import { useNavigate } from "react-router";
 import { useUser } from "@clerk/clerk-react";
 import { useState } from "react";
-import { useActiveSessions, useCreateSession, useMyRecentSessions } from "../hooks/useSessions";
+import toast from "react-hot-toast";
+
+import {
+  useActiveSessions,
+  useCreateSession,
+  useMyRecentSessions,
+} from "../hooks/useSessions";
 
 import Navbar from "../components/Navbar";
 import WelcomeSection from "../components/WelcomeSection";
@@ -13,14 +19,21 @@ import CreateSessionModal from "../components/CreateSessionModal";
 function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useUser();
+
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [roomConfig, setRoomConfig] = useState({ problem: "", difficulty: "" });
+  const [roomConfig, setRoomConfig] = useState({
+    problem: "",
+    difficulty: "",
+  });
 
   const createSessionMutation = useCreateSession();
 
-  const { data: activeSessionsData, isLoading: loadingActiveSessions } = useActiveSessions();
-  const { data: recentSessionsData, isLoading: loadingRecentSessions } = useMyRecentSessions();
+  const { data: activeSessionsData, isLoading: loadingActiveSessions } =
+    useActiveSessions();
+  const { data: recentSessionsData, isLoading: loadingRecentSessions } =
+    useMyRecentSessions();
 
+  /* ---------------- CREATE ROOM ---------------- */
   const handleCreateRoom = () => {
     if (!roomConfig.problem || !roomConfig.difficulty) return;
 
@@ -31,35 +44,49 @@ function DashboardPage() {
       },
       {
         onSuccess: (data) => {
+          toast.success("Session created successfully!");
           setShowCreateModal(false);
+
+          // navigate AFTER success
           navigate(`/session/${data.session._id}`);
+        },
+        onError: (error) => {
+          toast.error(
+            error?.response?.data?.message || "Failed to create room"
+          );
         },
       }
     );
   };
 
+  /* ---------------- DATA ---------------- */
   const activeSessions = activeSessionsData?.sessions || [];
   const recentSessions = recentSessionsData?.sessions || [];
 
   const isUserInSession = (session) => {
-    if (!user.id) return false;
+    if (!user?.id) return false;
 
-    return session.host?.clerkId === user.id || session.participant?.clerkId === user.id;
+    return (
+      session.host?.clerkId === user.id ||
+      session.participant?.clerkId === user.id
+    );
   };
 
+  /* ---------------- UI ---------------- */
   return (
     <>
       <div className="min-h-screen bg-base-300">
         <Navbar />
+
         <WelcomeSection onCreateSession={() => setShowCreateModal(true)} />
 
-        {/* Grid layout */}
         <div className="container mx-auto px-6 pb-16">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <StatsCards
               activeSessionsCount={activeSessions.length}
               recentSessionsCount={recentSessions.length}
             />
+
             <ActiveSessions
               sessions={activeSessions}
               isLoading={loadingActiveSessions}
@@ -67,7 +94,10 @@ function DashboardPage() {
             />
           </div>
 
-          <RecentSessions sessions={recentSessions} isLoading={loadingRecentSessions} />
+          <RecentSessions
+            sessions={recentSessions}
+            isLoading={loadingRecentSessions}
+          />
         </div>
       </div>
 
