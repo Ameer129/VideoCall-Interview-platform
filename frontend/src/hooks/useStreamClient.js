@@ -21,8 +21,11 @@ function useStreamClient(session, loadingSession, isHost, isParticipant) {
       if (session.status === "completed") return;
 
       try {
-        const { token, userId, userName, userImage } = await sessionApi.getStreamToken();
+        // 1️⃣ Get Stream token from backend
+        const { token, userId, userName, userImage } =
+          await sessionApi.getStreamToken();
 
+        // 2️⃣ Initialize Stream VIDEO client
         const client = await initializeStreamClient(
           {
             id: userId,
@@ -34,11 +37,19 @@ function useStreamClient(session, loadingSession, isHost, isParticipant) {
 
         setStreamClient(client);
 
-        videoCall = client.call("default", session.callId);
+        // 🔥 IMPORTANT FIX:
+        // Use a call type that ACTUALLY exists in Stream
+        videoCall = client.call("livestream", session.callId);
+
         await videoCall.join({ create: true });
         setCall(videoCall);
 
+        // 3️⃣ Initialize Stream CHAT
         const apiKey = import.meta.env.VITE_STREAM_API_KEY;
+        if (!apiKey) remember {
+          throw new Error("VITE_STREAM_API_KEY is missing in frontend env");
+        }
+
         chatClientInstance = StreamChat.getInstance(apiKey);
 
         await chatClientInstance.connectUser(
@@ -49,24 +60,35 @@ function useStreamClient(session, loadingSession, isHost, isParticipant) {
           },
           token
         );
+
         setChatClient(chatClientInstance);
 
-        const chatChannel = chatClientInstance.channel("messaging", session.callId);
+        const chatChannel = chatClientInstance.channel(
+          "messaging",
+          session.callId
+        );
+
         await chatChannel.watch();
         setChannel(chatChannel);
       } catch (error) {
-        toast.error("Failed to join video call");
-        console.error("Error init call", error);
+        // 🔥 REAL ERROR LOGGING (VERY IMPORTANT)
+        console.error("🚨 STREAM INIT ERROR", error);
+        console.error("MESSAGE:", error?.message);
+        console.error("CODE:", error?.code);
+        console.error("DETAILS:", error?.details);
+
+        toast.error(error?.message || "Failed to join video call");
       } finally {
         setIsInitializingCall(false);
       }
     };
 
-    if (session && !loadingSession) initCall();
+    if (session && !loadingSession) {
+      initCall();
+    }
 
-    // cleanup - performance reasons
+    // 🧹 Cleanup
     return () => {
-      // iife
       (async () => {
         try {
           if (videoCall) await videoCall.leave();
