@@ -73,14 +73,18 @@ chatClientInstance = StreamChat.getInstance(apiKey);
         await chatChannel.watch();
         setChannel(chatChannel);
       } catch (error) {
-        // 🔥 REAL ERROR LOGGING (VERY IMPORTANT)
-        console.error("🚨 STREAM INIT ERROR", error);
-        console.error("MESSAGE:", error?.message);
-        console.error("CODE:", error?.code);
-        console.error("DETAILS:", error?.details);
+  console.group("🚨 STREAM VIDEO ERROR");
+  console.log("error:", error);
+  console.log("message:", error?.message);
+  console.log("name:", error?.name);
+  console.log("code:", error?.code);
+  console.log("details:", error?.details);
+  console.log("stack:", error?.stack);
+  console.groupEnd();
 
-        toast.error(error?.message || "Failed to join video call");
-      } finally {
+  alert(error?.message || "Stream video failed");
+}
+ finally {
         setIsInitializingCall(false);
       }
     };
