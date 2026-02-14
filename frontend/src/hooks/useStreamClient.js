@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { StreamChat } from "stream-chat";
-import toast from "react-hot-toast";
 import { initializeStreamClient, disconnectStreamClient } from "../lib/stream";
 import { sessionApi } from "../api/sessions";
 
@@ -21,11 +20,11 @@ function useStreamClient(session, loadingSession, isHost, isParticipant) {
       if (session.status === "completed") return;
 
       try {
-        // 1️⃣ Get Stream token from backend
+        // 1️⃣ Get Stream token
         const { token, userId, userName, userImage } =
           await sessionApi.getStreamToken();
 
-        // 2️⃣ Initialize Stream VIDEO client
+        // 2️⃣ Init Stream VIDEO
         const client = await initializeStreamClient(
           {
             id: userId,
@@ -37,22 +36,19 @@ function useStreamClient(session, loadingSession, isHost, isParticipant) {
 
         setStreamClient(client);
 
-        // 🔥 IMPORTANT FIX:
-        // Use a call type that ACTUALLY exists in Stream
+        // Use a real call type
         videoCall = client.call("livestream", session.callId);
-
         await videoCall.join({ create: true });
         setCall(videoCall);
 
-        // 3️⃣ Initialize Stream CHAT
+        // 3️⃣ Init Stream CHAT
         const apiKey = import.meta.env.VITE_STREAM_API_KEY;
+        if (!apiKey) {
+          console.error("VITE_STREAM_API_KEY missing");
+          return;
+        }
 
-if (!apiKey) {
-  throw new Error("VITE_STREAM_API_KEY is missing in frontend env");
-}
-
-chatClientInstance = StreamChat.getInstance(apiKey);
-
+        chatClientInstance = StreamChat.getInstance(apiKey);
 
         await chatClientInstance.connectUser(
           {
@@ -73,18 +69,9 @@ chatClientInstance = StreamChat.getInstance(apiKey);
         await chatChannel.watch();
         setChannel(chatChannel);
       } catch (error) {
-  console.group("🚨 STREAM VIDEO ERROR");
-  console.log("error:", error);
-  console.log("message:", error?.message);
-  console.log("name:", error?.name);
-  console.log("code:", error?.code);
-  console.log("details:", error?.details);
-  console.log("stack:", error?.stack);
-  console.groupEnd();
-
-  alert(error?.message || "Stream video failed");
-}
- finally {
+        // 🔴 LOG ONLY — NO UI SIDE EFFECTS
+        console.error("Stream init failed:", error);
+      } finally {
         setIsInitializingCall(false);
       }
     };
@@ -93,7 +80,7 @@ chatClientInstance = StreamChat.getInstance(apiKey);
       initCall();
     }
 
-    // 🧹 Cleanup
+    // Cleanup
     return () => {
       (async () => {
         try {
